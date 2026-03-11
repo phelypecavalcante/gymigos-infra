@@ -1,4 +1,4 @@
-.PHONY: up down logs ps restart
+.PHONY: up down logs ps restart generate
 
 up:
 	docker compose up --build -d
@@ -20,3 +20,7 @@ api-logs:
 
 db-logs:
 	docker compose logs -f db
+
+generate:
+	cd ../gymigos-api && make generate
+	cd ../gymigos-contracts && npm run generate
