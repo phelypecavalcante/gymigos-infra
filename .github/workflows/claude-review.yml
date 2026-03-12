@@ -28,18 +28,16 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch prompts from muninn
+        env:
+          GH_TOKEN: ${{ secrets.MUNINN_PAT }}
         run: |
           mkdir -p .muninn
-          curl -sf \
-            -H "Authorization: token ${{ secrets.MUNINN_PAT }}" \
-            -H "Accept: application/vnd.github.raw" \
-            "https://api.github.com/repos/phelypecavalcante/muninn/contents/review-prompts/infra/triage.md" \
-            -o .muninn/triage.md
-          curl -sf \
-            -H "Authorization: token ${{ secrets.MUNINN_PAT }}" \
-            -H "Accept: application/vnd.github.raw" \
-            "https://api.github.com/repos/phelypecavalcante/muninn/contents/review-prompts/infra/deep.md" \
-            -o .muninn/deep.md
+          gh api repos/phelypecavalcante/muninn/contents/review-prompts/infra/triage.md \
+            --header "Accept: application/vnd.github.raw+json" \
+            > .muninn/triage.md
+          gh api repos/phelypecavalcante/muninn/contents/review-prompts/infra/deep.md \
+            --header "Accept: application/vnd.github.raw+json" \
+            > .muninn/deep.md
 
       - name: Load triage prompt
         id: triage-prompt
@@ -82,13 +80,13 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch prompts from muninn
+        env:
+          GH_TOKEN: ${{ secrets.MUNINN_PAT }}
         run: |
           mkdir -p .muninn
-          curl -sf \
-            -H "Authorization: token ${{ secrets.MUNINN_PAT }}" \
-            -H "Accept: application/vnd.github.raw" \
-            "https://api.github.com/repos/phelypecavalcante/muninn/contents/review-prompts/infra/deep.md" \
-            -o .muninn/deep.md
+          gh api repos/phelypecavalcante/muninn/contents/review-prompts/infra/deep.md \
+            --header "Accept: application/vnd.github.raw+json" \
+            > .muninn/deep.md
 
       - name: Load deep review prompt
         id: deep-prompt
