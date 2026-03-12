@@ -1,0 +1,106 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  REPO_NAME: "gymigos-infra"
+  REPO_CONTEXT: |
+    Manages Docker Compose for local dev (db: PostgreSQL, api: gymigos-api with Air hot-reload, web: gymigos-web with Vite HMR) and any cloud/production infra.
+    TLS terminated at reverse proxy (Nginx, Caddy, or Traefik) — never in the Go app.
+    Secrets via .env files (gitignored) or secrets managers, never hardcoded.
+    APP_ENV controls production vs dev behaviour (e.g. Secure cookie flag).
+
+jobs:
+  haiku-triage:
+    runs-on: ubuntu-latest
+    outputs:
+      approved: ${{ steps.check.outputs.approved }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: phelypecavalcante/muninn
+          token: ${{ secrets.MUNINN_PAT }}
+          path: .muninn
+          sparse-checkout: review-prompts/infra
+          sparse-checkout-cone-mode: false
+
+      - name: Load triage prompt
+        id: triage-prompt
+        run: |
+          {
+            echo 'prompt<<PROMPT_EOF'
+            PR_NUMBER="${{ github.event.pull_request.number }}" \
+            REPO="${{ github.repository }}" \
+            REPO_NAME="$REPO_NAME" \
+            REPO_CONTEXT="$REPO_CONTEXT" \
+            envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT}' \
+              < .muninn/review-prompts/infra/triage.md
+            echo 'PROMPT_EOF'
+          } >> $GITHUB_OUTPUT
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: ${{ steps.triage-prompt.outputs.prompt }}
+          claude_args: "--max-turns 5 --model claude-haiku-4-5-20251001"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check triage decision
+        id: check
+        run: |
+          sleep 3
+          DECISION=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json reviewDecision --jq '.reviewDecision')
+          echo "approved=$([[ "$DECISION" == "APPROVED" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sonnet-review:
+    needs: haiku-triage
+    if: needs.haiku-triage.outputs.approved == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: phelypecavalcante/muninn
+          token: ${{ secrets.MUNINN_PAT }}
+          path: .muninn
+          sparse-checkout: review-prompts/infra
+          sparse-checkout-cone-mode: false
+
+      - name: Load deep review prompt
+        id: deep-prompt
+        run: |
+          {
+            echo 'prompt<<PROMPT_EOF'
+            PR_NUMBER="${{ github.event.pull_request.number }}" \
+            REPO="${{ github.repository }}" \
+            REPO_NAME="$REPO_NAME" \
+            REPO_CONTEXT="$REPO_CONTEXT" \
+            envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT}' \
+              < .muninn/review-prompts/infra/deep.md
+            echo 'PROMPT_EOF'
+          } >> $GITHUB_OUTPUT
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: ${{ steps.deep-prompt.outputs.prompt }}
+          claude_args: "--max-turns 10 --model claude-sonnet-4-6"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
