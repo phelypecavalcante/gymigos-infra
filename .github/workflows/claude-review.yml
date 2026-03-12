@@ -56,7 +56,6 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: ${{ steps.triage-prompt.outputs.prompt }}
           claude_args: "--max-turns 5 --model claude-haiku-4-5-20251001"
         env:
@@ -105,7 +104,6 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: ${{ steps.deep-prompt.outputs.prompt }}
           claude_args: "--max-turns 10 --model claude-sonnet-4-6"
         env:
