@@ -27,13 +27,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
-        with:
-          repository: phelypecavalcante/muninn
-          token: ${{ secrets.MUNINN_PAT }}
-          path: .muninn
-          sparse-checkout: review-prompts/infra
-          sparse-checkout-cone-mode: false
+      - name: Fetch prompts from muninn
+        run: |
+          mkdir -p .muninn
+          curl -sf \
+            -H "Authorization: token ${{ secrets.MUNINN_PAT }}" \
+            -H "Accept: application/vnd.github.raw" \
+            "https://api.github.com/repos/phelypecavalcante/muninn/contents/review-prompts/infra/triage.md" \
+            -o .muninn/triage.md
+          curl -sf \
+            -H "Authorization: token ${{ secrets.MUNINN_PAT }}" \
+            -H "Accept: application/vnd.github.raw" \
+            "https://api.github.com/repos/phelypecavalcante/muninn/contents/review-prompts/infra/deep.md" \
+            -o .muninn/deep.md
 
       - name: Load triage prompt
         id: triage-prompt
@@ -45,7 +51,7 @@ jobs:
             REPO_NAME="$REPO_NAME" \
             REPO_CONTEXT="$REPO_CONTEXT" \
             envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT}' \
-              < .muninn/review-prompts/infra/triage.md
+              < .muninn/triage.md
             echo 'PROMPT_EOF'
           } >> $GITHUB_OUTPUT
 
@@ -75,13 +81,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
-        with:
-          repository: phelypecavalcante/muninn
-          token: ${{ secrets.MUNINN_PAT }}
-          path: .muninn
-          sparse-checkout: review-prompts/infra
-          sparse-checkout-cone-mode: false
+      - name: Fetch prompts from muninn
+        run: |
+          mkdir -p .muninn
+          curl -sf \
+            -H "Authorization: token ${{ secrets.MUNINN_PAT }}" \
+            -H "Accept: application/vnd.github.raw" \
+            "https://api.github.com/repos/phelypecavalcante/muninn/contents/review-prompts/infra/deep.md" \
+            -o .muninn/deep.md
 
       - name: Load deep review prompt
         id: deep-prompt
@@ -93,7 +100,7 @@ jobs:
             REPO_NAME="$REPO_NAME" \
             REPO_CONTEXT="$REPO_CONTEXT" \
             envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT}' \
-              < .muninn/review-prompts/infra/deep.md
+              < .muninn/deep.md
             echo 'PROMPT_EOF'
           } >> $GITHUB_OUTPUT
 
