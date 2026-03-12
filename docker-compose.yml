@@ -34,9 +34,9 @@ services:
         condition: service_healthy
 
   web:
-    image: node:22-alpine
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host"
+    build:
+      context: ../gymigos-web
+      dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
     volumes:
