@@ -58,6 +58,7 @@ jobs:
         with:
           prompt: ${{ steps.triage-prompt.outputs.prompt }}
           claude_args: "--max-turns 5 --model claude-haiku-4-5-20251001"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -106,5 +107,6 @@ jobs:
         with:
           prompt: ${{ steps.deep-prompt.outputs.prompt }}
           claude_args: "--max-turns 10 --model claude-sonnet-4-6"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
