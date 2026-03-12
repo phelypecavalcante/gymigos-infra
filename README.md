@@ -40,7 +40,7 @@ make restart          # restart all services
 |---|---|
 | PostgreSQL | 5432 |
 | gymigos-api | 8080 |
-| gymigos-web | 5173 (coming soon) |
+| gymigos-web | 5173 |
 
 ## Environment Variables
 
