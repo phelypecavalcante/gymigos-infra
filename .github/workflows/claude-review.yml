@@ -65,9 +65,8 @@ jobs:
       - name: Check triage decision
         id: check
         run: |
-          sleep 3
-          DECISION=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json reviewDecision --jq '.reviewDecision')
-          echo "approved=$([[ "$DECISION" == "APPROVED" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          PASSED=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json comments --jq '[.comments[].body] | any(.[]; contains("TRIAGE_PASSED"))')
+          echo "approved=$PASSED" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
