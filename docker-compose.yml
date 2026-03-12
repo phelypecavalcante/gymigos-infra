@@ -33,7 +33,17 @@ services:
       db:
         condition: service_healthy
 
-  # web: scaffolded in Phase 2
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: npm run dev -- --host
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../gymigos-web:/app
+      - /app/node_modules
+    depends_on:
+      - api
 
 volumes:
   db_data:
