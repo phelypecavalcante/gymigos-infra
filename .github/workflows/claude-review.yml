@@ -43,7 +43,7 @@ jobs:
       - name: Pre-compute triage facts
         id: triage-facts
         run: |
-          LINE_COUNT=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | wc -l)
+          LINE_COUNT=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | awk '/^diff --git / { skip = ($0 ~ /package-lock\.json|yarn\.lock|pubspec\.lock|go\.sum|\.md b\//) } !skip' | wc -l)
           echo "line_count=$LINE_COUNT" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -104,7 +104,7 @@ jobs:
         run: |
           {
             echo 'diff<<__MUNINN_END__'
-            gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
+            gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | awk '/^diff --git / { skip = ($0 ~ /package-lock\.json|yarn\.lock|pubspec\.lock|go\.sum|\.md b\//) } !skip'
             echo '__MUNINN_END__'
           } >> $GITHUB_OUTPUT
           {
