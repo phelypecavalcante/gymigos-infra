@@ -57,7 +57,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           prompt: ${{ steps.triage-prompt.outputs.prompt }}
-          claude_args: "--max-turns 5 --model claude-haiku-4-5-20251001 --allowedTools Bash(gh:*)"
+          claude_args: "--max-turns 10 --model claude-haiku-4-5-20251001 --allowedTools Bash(gh:*)"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
