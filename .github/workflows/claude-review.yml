@@ -40,8 +40,18 @@ jobs:
             --header "Accept: application/vnd.github.raw+json" \
             > .muninn/deep.md
 
+      - name: Pre-compute triage facts
+        id: triage-facts
+        run: |
+          LINE_COUNT=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | wc -l)
+          echo "line_count=$LINE_COUNT" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Load triage prompt
         id: triage-prompt
+        env:
+          LINE_COUNT: ${{ steps.triage-facts.outputs.line_count }}
         run: |
           {
             echo 'prompt<<PROMPT_EOF'
@@ -49,7 +59,8 @@ jobs:
             REPO="${{ github.repository }}" \
             REPO_NAME="$REPO_NAME" \
             REPO_CONTEXT="$REPO_CONTEXT" \
-            envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT}' \
+            LINE_COUNT="$LINE_COUNT" \
+            envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT} ${LINE_COUNT}' \
               < .muninn/triage.md
             echo 'PROMPT_EOF'
           } >> $GITHUB_OUTPUT
@@ -57,7 +68,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           prompt: ${{ steps.triage-prompt.outputs.prompt }}
-          claude_args: "--max-turns 10 --model claude-haiku-4-5-20251001 --allowedTools Bash(gh:*)"
+          claude_args: "--max-turns 5 --model claude-haiku-4-5-20251001 --allowedTools Bash(gh:*)"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
