@@ -99,24 +99,49 @@ jobs:
             --header "Accept: application/vnd.github.raw+json" \
             > .muninn/deep.md
 
-      - name: Load deep review prompt
-        id: deep-prompt
+      - name: Pre-fetch PR content
+        id: pr-content
         run: |
           {
-            echo 'prompt<<PROMPT_EOF'
+            echo 'diff<<__MUNINN_END__'
+            gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
+            echo '__MUNINN_END__'
+          } >> $GITHUB_OUTPUT
+          {
+            echo 'body<<__MUNINN_END__'
+            gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json body --jq '.body'
+            echo '__MUNINN_END__'
+          } >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Load deep review prompt
+        id: deep-prompt
+        env:
+          PR_DIFF: ${{ steps.pr-content.outputs.diff }}
+          PR_BODY: ${{ steps.pr-content.outputs.body }}
+        run: |
+          {
+            echo 'prompt<<__MUNINN_END__'
             PR_NUMBER="${{ github.event.pull_request.number }}" \
             REPO="${{ github.repository }}" \
             REPO_NAME="$REPO_NAME" \
             REPO_CONTEXT="$REPO_CONTEXT" \
             envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT}' \
               < .muninn/deep.md
-            echo 'PROMPT_EOF'
+            echo ''
+            echo '## Pull Request Description'
+            echo "$PR_BODY"
+            echo ''
+            echo '## Full Diff'
+            echo "$PR_DIFF"
+            echo '__MUNINN_END__'
           } >> $GITHUB_OUTPUT
 
       - uses: anthropics/claude-code-action@v1
         with:
           prompt: ${{ steps.deep-prompt.outputs.prompt }}
-          claude_args: "--max-turns 10 --model claude-sonnet-4-6 --allowedTools Bash(gh:*)"
+          claude_args: "--max-turns 5 --model claude-sonnet-4-6 --allowedTools Bash(gh:*)"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
