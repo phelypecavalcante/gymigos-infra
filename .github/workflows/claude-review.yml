@@ -43,8 +43,14 @@ jobs:
       - name: Pre-compute triage facts
         id: triage-facts
         run: |
-          LINE_COUNT=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | awk '/^diff --git / { skip = ($0 ~ /package-lock\.json|yarn\.lock|pubspec\.lock|go\.sum|\.md b\//) } !skip' | wc -l)
+          FILTERED_DIFF=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | awk '/^diff --git / { skip = ($0 ~ /package-lock\.json|yarn\.lock|pubspec\.lock|go\.sum|\.md b\//) } !skip')
+          LINE_COUNT=$(echo "$FILTERED_DIFF" | wc -l)
           echo "line_count=$LINE_COUNT" >> $GITHUB_OUTPUT
+          {
+            echo 'diff<<__MUNINN_END__'
+            echo "$FILTERED_DIFF"
+            echo '__MUNINN_END__'
+          } >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -52,9 +58,10 @@ jobs:
         id: triage-prompt
         env:
           LINE_COUNT: ${{ steps.triage-facts.outputs.line_count }}
+          PR_DIFF: ${{ steps.triage-facts.outputs.diff }}
         run: |
           {
-            echo 'prompt<<PROMPT_EOF'
+            echo 'prompt<<__MUNINN_END__'
             PR_NUMBER="${{ github.event.pull_request.number }}" \
             REPO="${{ github.repository }}" \
             REPO_NAME="$REPO_NAME" \
@@ -62,13 +69,16 @@ jobs:
             LINE_COUNT="$LINE_COUNT" \
             envsubst '${PR_NUMBER} ${REPO} ${REPO_NAME} ${REPO_CONTEXT} ${LINE_COUNT}' \
               < .muninn/triage.md
-            echo 'PROMPT_EOF'
+            echo ''
+            echo '## Full Diff'
+            echo "$PR_DIFF"
+            echo '__MUNINN_END__'
           } >> $GITHUB_OUTPUT
 
       - uses: anthropics/claude-code-action@v1
         with:
           prompt: ${{ steps.triage-prompt.outputs.prompt }}
-          claude_args: "--max-turns 5 --model claude-haiku-4-5-20251001 --allowedTools Bash(gh:*)"
+          claude_args: "--max-turns 3 --model claude-haiku-4-5-20251001 --allowedTools Bash(gh:*)"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -141,7 +151,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           prompt: ${{ steps.deep-prompt.outputs.prompt }}
-          claude_args: "--max-turns 5 --model claude-sonnet-4-6 --allowedTools Bash(gh:*)"
+          claude_args: "--max-turns 3 --model claude-sonnet-4-6 --allowedTools Bash(gh:*)"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
